@@ -14,6 +14,7 @@
     TX: 'fintrack_transactions',
     BUDGET: 'fintrack_budget',
     THEME: 'fintrack_theme',
+    CURRENCY: 'fintrack_currency',
   };
 
   const CATEGORIES = [
@@ -25,6 +26,10 @@
     { id: 'entertainment', label: 'Entertainment', type: 'expense', icon: '🎬' },
     { id: 'bills', label: 'Bills', type: 'expense', icon: '💡' },
     { id: 'education', label: 'Education', type: 'expense', icon: '🎓' },
+    { id: 'housing', label: 'Housing', type: 'expense', icon: '🏠' },
+    { id: 'health', label: 'Health', type: 'expense', icon: '🩺' },
+    { id: 'subscriptions', label: 'Subscriptions', type: 'expense', icon: '🔁' },
+    { id: 'gifts', label: 'Gifts', type: 'expense', icon: '🎁' },
     { id: 'other', label: 'Other', type: 'both', icon: '✨' },
   ];
   const CATEGORY_MAP = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
@@ -39,6 +44,10 @@
     entertainment: '#e8a33d',
     bills: '#5c9eea',
     education: '#f2789a',
+    housing: '#d4af6a',
+    health: '#45b7aa',
+    subscriptions: '#8a7cf0',
+    gifts: '#e28b5b',
     other: '#8d97a8',
   };
 
@@ -56,6 +65,7 @@
     transactions: ['Transactions', 'Manage all your income and expenses'],
     analytics: ['Analytics', 'Visualize where your money goes'],
     budget: ['Budget', 'Set limits and track your spending'],
+    settings: ['Settings', 'Control your currency, backups and local data'],
   };
 
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -68,6 +78,7 @@
     transactions: [],
     budget: 0,
     theme: 'dark',
+    currency: 'NGN',
     currentView: 'dashboard',
     formType: 'expense',
     editingId: null,
@@ -80,10 +91,10 @@
      Utilities
      ------------------------------------------------------------------ */
 
-  const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
   function formatCurrency(n) {
     if (!isFinite(n)) n = 0;
-    return currencyFormatter.format(n);
+    const locale = state.currency === 'NGN' ? 'en-NG' : state.currency === 'GBP' ? 'en-GB' : state.currency === 'EUR' ? 'en-IE' : 'en-US';
+    return new Intl.NumberFormat(locale, { style: 'currency', currency: state.currency, maximumFractionDigits: 2 }).format(n);
   }
 
   function formatDate(dateStr) {
@@ -156,7 +167,11 @@
       entertainment: ['Movie tickets', 'Concert tickets', 'Netflix subscription', 'Spotify Premium', 'Bowling night', 'Museum admission'],
       bills: ['Electricity bill', 'Internet bill', 'Phone bill', 'Water bill', 'Gym membership', 'Insurance premium'],
       education: ['Online course', 'Textbooks', 'Bootcamp fee installment', 'Udemy course bundle', 'Language app subscription'],
-      other: ['ATM cash withdrawal', 'Gift for a friend', 'Charity donation', 'Miscellaneous purchase'],
+      housing: ['Rent payment', 'Home repair', 'Household supplies'],
+      health: ['Pharmacy', 'Doctor visit', 'Health checkup'],
+      subscriptions: ['Streaming subscription', 'Cloud storage', 'Software subscription'],
+      gifts: ['Birthday gift', 'Gift for a friend'],
+      other: ['ATM cash withdrawal', 'Charity donation', 'Miscellaneous purchase'],
       salary: ['Monthly salary'],
       freelance: ['Freelance web project', 'Logo design gig', 'Freelance consulting', 'Contract dev work'],
     };
@@ -223,16 +238,15 @@
   function loadTransactions() {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.TX);
-      if (raw) {
+      if (raw !== null) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch (e) {
       console.warn('FinTrack: could not read stored transactions', e);
     }
-    const seeded = generateSeedData();
-    persistTransactions(seeded);
-    return seeded;
+    persistTransactions([]);
+    return [];
   }
   function persistTransactions(list) {
     localStorage.setItem(STORAGE_KEYS.TX, JSON.stringify(list));
@@ -244,7 +258,7 @@
       const n = parseFloat(raw);
       if (!isNaN(n)) return n;
     }
-    const def = 3000;
+    const def = 0;
     localStorage.setItem(STORAGE_KEYS.BUDGET, String(def));
     return def;
   }
@@ -257,6 +271,14 @@
   }
   function persistTheme(t) {
     localStorage.setItem(STORAGE_KEYS.THEME, t);
+  }
+
+  function loadCurrency() {
+    const saved = localStorage.getItem(STORAGE_KEYS.CURRENCY);
+    return ['NGN', 'USD', 'GBP', 'EUR', 'CAD'].includes(saved) ? saved : 'NGN';
+  }
+  function persistCurrency(currency) {
+    localStorage.setItem(STORAGE_KEYS.CURRENCY, currency);
   }
 
   /* ------------------------------------------------------------------
@@ -272,8 +294,10 @@
       'statBalance', 'statBalanceDelta', 'statIncome', 'statIncomeDelta',
       'statExpenses', 'statExpensesDelta', 'statSavings', 'statSavingsDelta',
       'budgetMonthLabel', 'budgetMiniContent', 'recentTransactions',
-      'filterType', 'filterCategory', 'sortBy', 'txCountLabel', 'txTable', 'txTableBody',
+      'filterType', 'filterCategory', 'filterMonth', 'sortBy', 'clearFiltersBtn', 'txCountLabel', 'txTable', 'txTableBody',
       'txEmptyState', 'emptyStateAddBtn',
+      'currencySelect', 'storageSummary', 'storageDetail', 'exportDataBtn', 'importDataBtn', 'importDataFile',
+      'loadSampleBtn', 'clearAllDataBtn',
       'categoryChartSub', 'categoryLegend',
       'budgetForm', 'budgetInput', 'budgetMonthLabel2', 'budgetDetailContent', 'budgetCategoryBreakdown',
       'modalOverlay', 'modalTitle', 'modalCloseBtn', 'txForm', 'txId', 'txAmount', 'txDescription',
@@ -517,10 +541,12 @@
     const typeVal = dom.filterType.value;
     const catVal = dom.filterCategory.value;
     const sortVal = dom.sortBy.value;
+    const monthVal = dom.filterMonth ? dom.filterMonth.value : '';
 
     let list = state.transactions.slice();
     if (typeVal !== 'all') list = list.filter((t) => t.type === typeVal);
     if (catVal !== 'all') list = list.filter((t) => t.category === catVal);
+    if (monthVal) list = list.filter((t) => t.date.slice(0, 7) === monthVal);
     if (q) {
       list = list.filter((t) =>
         t.description.toLowerCase().includes(q) ||
@@ -562,11 +588,26 @@
     renderBudgetCategoryBreakdown();
   }
 
+  function renderSettingsView() {
+    if (dom.currencySelect) dom.currencySelect.value = state.currency;
+    if (dom.storageSummary) dom.storageSummary.textContent = 'Local storage active';
+    if (dom.storageDetail) {
+      const bytes = new Blob([
+        localStorage.getItem(STORAGE_KEYS.TX) || '',
+        localStorage.getItem(STORAGE_KEYS.BUDGET) || '',
+        localStorage.getItem(STORAGE_KEYS.CURRENCY) || ''
+      ]).size;
+      const size = bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`;
+      dom.storageDetail.textContent = `${state.transactions.length} transaction${state.transactions.length === 1 ? '' : 's'} saved · about ${size}`;
+    }
+  }
+
   function renderAll() {
     renderDashboard();
     renderTransactionsView();
     renderAnalyticsMeta();
     renderBudgetView();
+    renderSettingsView();
     refreshVisibleCharts();
   }
 
@@ -936,6 +977,92 @@
     if (deleteBtn) { openConfirm(deleteBtn.dataset.id); return; }
   }
 
+
+  /* ------------------------------------------------------------------
+     Local data tools
+     ------------------------------------------------------------------ */
+
+  function exportBackup() {
+    const payload = {
+      app: 'FinTrack',
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      currency: state.currency,
+      budget: state.budget,
+      transactions: state.transactions,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `fintrack-backup-${todayISO()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast('Backup exported.', 'success');
+  }
+
+  function validateImportedTransactions(list) {
+    if (!Array.isArray(list)) return false;
+    return list.every((t) =>
+      t && typeof t.id === 'string' &&
+      ['income', 'expense'].includes(t.type) &&
+      Number.isFinite(Number(t.amount)) &&
+      typeof t.description === 'string' &&
+      typeof t.category === 'string' &&
+      /^\d{4}-\d{2}-\d{2}$/.test(t.date)
+    );
+  }
+
+  async function importBackupFile(file) {
+    if (!file) return;
+    try {
+      const payload = JSON.parse(await file.text());
+      if (!payload || !validateImportedTransactions(payload.transactions)) throw new Error('Invalid FinTrack backup');
+      state.transactions = payload.transactions.map((t) => ({ ...t, amount: Number(t.amount), createdAt: Number(t.createdAt) || Date.now() }));
+      state.budget = Number.isFinite(Number(payload.budget)) ? Math.max(0, Number(payload.budget)) : 0;
+      if (['NGN', 'USD', 'GBP', 'EUR', 'CAD'].includes(payload.currency)) state.currency = payload.currency;
+      persistTransactions(state.transactions);
+      persistBudget(state.budget);
+      persistCurrency(state.currency);
+      renderAll();
+      showToast('Backup imported successfully.', 'success');
+    } catch (err) {
+      console.warn('FinTrack import failed', err);
+      showToast('That file is not a valid FinTrack backup.', 'error');
+    } finally {
+      dom.importDataFile.value = '';
+    }
+  }
+
+  function loadSampleData() {
+    if (state.transactions.length && !window.confirm('Replace your current transactions with sample data? Export a backup first if needed.')) return;
+    state.transactions = generateSeedData();
+    persistTransactions(state.transactions);
+    renderAll();
+    showToast('Sample data loaded. You can clear it anytime.', 'success');
+  }
+
+  function clearAllFinanceData() {
+    if (!window.confirm('Clear all transactions and your budget from this browser? This cannot be undone unless you exported a backup.')) return;
+    state.transactions = [];
+    state.budget = 0;
+    persistTransactions([]);
+    persistBudget(0);
+    renderAll();
+    showToast('Finance data cleared. Your ledger will stay empty.', 'success');
+  }
+
+  function clearTransactionFilters() {
+    dom.filterType.value = 'all';
+    dom.filterCategory.value = 'all';
+    dom.filterMonth.value = '';
+    dom.sortBy.value = 'date-desc';
+    dom.globalSearch.value = '';
+    renderTransactionsView();
+  }
+
   /* ------------------------------------------------------------------
      Event binding
      ------------------------------------------------------------------ */
@@ -972,13 +1099,27 @@
 
     dom.filterType.addEventListener('change', renderTransactionsView);
     dom.filterCategory.addEventListener('change', renderTransactionsView);
+    dom.filterMonth.addEventListener('change', renderTransactionsView);
     dom.sortBy.addEventListener('change', renderTransactionsView);
+    dom.clearFiltersBtn.addEventListener('click', clearTransactionFilters);
     dom.globalSearch.addEventListener('input', () => {
       if (state.currentView !== 'transactions') switchView('transactions');
       renderTransactionsView();
     });
 
     dom.budgetForm.addEventListener('submit', handleBudgetSubmit);
+
+    dom.currencySelect.addEventListener('change', () => {
+      state.currency = dom.currencySelect.value;
+      persistCurrency(state.currency);
+      renderAll();
+      showToast(`Currency changed to ${state.currency}.`, 'success');
+    });
+    dom.exportDataBtn.addEventListener('click', exportBackup);
+    dom.importDataBtn.addEventListener('click', () => dom.importDataFile.click());
+    dom.importDataFile.addEventListener('change', () => importBackupFile(dom.importDataFile.files[0]));
+    dom.loadSampleBtn.addEventListener('click', loadSampleData);
+    dom.clearAllDataBtn.addEventListener('click', clearAllFinanceData);
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { closeModal(); closeConfirm(); closeSidebar(); }
@@ -998,6 +1139,7 @@
 
     state.theme = loadTheme();
     applyTheme(state.theme);
+    state.currency = loadCurrency();
 
     state.transactions = loadTransactions();
     state.budget = loadBudget();

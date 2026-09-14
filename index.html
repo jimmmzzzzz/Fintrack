@@ -56,6 +56,10 @@
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <span>Budget</span>
       </button>
+      <button class="nav-item" data-view="settings" type="button">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" stroke="currentColor" stroke-width="1.8"/><path d="M19 13.5v-3l-2.1-.7a7.8 7.8 0 0 0-.7-1.7l1-2-2.1-2.1-2 1a7.8 7.8 0 0 0-1.7-.7L10.5 2h-3l-.7 2.1a7.8 7.8 0 0 0-1.7.7l-2-1L1 5.9l1 2a7.8 7.8 0 0 0-.7 1.7L0 10.5v3l2.1.7c.2.6.4 1.2.7 1.7l-1 2L3.9 20l2-1c.5.3 1.1.5 1.7.7l.9 2.3h3l.7-2.1c.6-.2 1.2-.4 1.7-.7l2 1 2.1-2.1-1-2c.3-.5.5-1.1.7-1.7l2.3-.9Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" transform="translate(1 0) scale(.92)"/></svg>
+        <span>Settings</span>
+      </button>
     </nav>
 
     <div class="sidebar__footer">
@@ -64,7 +68,7 @@
         <svg class="icon-moon" viewBox="0 0 24 24" fill="none"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z" fill="currentColor"/></svg>
         <span class="theme-toggle__label">Light mode</span>
       </button>
-      <p class="sidebar__version">FinTrack v1.0 — local &amp; private</p>
+      <p class="sidebar__version">FinTrack v2.0 — local &amp; private</p>
     </div>
   </aside>
 
@@ -204,12 +208,14 @@
               <select id="filterCategory" class="select">
                 <option value="all">All categories</option>
               </select>
+              <input id="filterMonth" class="select month-filter" type="month" aria-label="Filter by month" />
               <select id="sortBy" class="select">
                 <option value="date-desc">Newest first</option>
                 <option value="date-asc">Oldest first</option>
                 <option value="amount-desc">Amount: high to low</option>
                 <option value="amount-asc">Amount: low to high</option>
               </select>
+              <button class="btn btn--ghost btn--sm" id="clearFiltersBtn" type="button">Clear</button>
             </div>
           </div>
           <div class="table-wrap">
@@ -320,6 +326,69 @@
             </div>
           </div>
           <div id="budgetCategoryBreakdown" class="budget-category-list"></div>
+        </div>
+      </section>
+
+      <!-- SETTINGS VIEW -->
+      <section class="view" id="view-settings" aria-labelledby="viewTitle">
+        <div class="settings-grid">
+          <div class="panel">
+            <div class="panel__head">
+              <div>
+                <h2>Money display</h2>
+                <p class="panel__sub">Choose how FinTrack formats your amounts</p>
+              </div>
+            </div>
+            <label class="field">
+              <span class="field__label">Currency</span>
+              <select id="currencySelect">
+                <option value="NGN">Nigerian Naira (₦)</option>
+                <option value="USD">US Dollar ($)</option>
+                <option value="GBP">British Pound (£)</option>
+                <option value="EUR">Euro (€)</option>
+                <option value="CAD">Canadian Dollar (C$)</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="panel">
+            <div class="panel__head">
+              <div>
+                <h2>Local data</h2>
+                <p class="panel__sub">Your finance data stays in this browser on this device</p>
+              </div>
+            </div>
+            <div class="data-status">
+              <span class="data-status__dot"></span>
+              <div>
+                <strong id="storageSummary">Local storage active</strong>
+                <p id="storageDetail">0 transactions saved</p>
+              </div>
+            </div>
+            <div class="settings-actions">
+              <button class="btn btn--primary" id="exportDataBtn" type="button">Export backup</button>
+              <button class="btn btn--ghost" id="importDataBtn" type="button">Import backup</button>
+              <input id="importDataFile" type="file" accept="application/json,.json" hidden />
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel__head">
+              <div>
+                <h2>Demo & reset</h2>
+                <p class="panel__sub">Sample data is optional. FinTrack no longer recreates it automatically.</p>
+              </div>
+            </div>
+            <div class="settings-actions">
+              <button class="btn btn--ghost" id="loadSampleBtn" type="button">Load sample data</button>
+              <button class="btn btn--danger" id="clearAllDataBtn" type="button">Clear all finance data</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="privacy-note">
+          <strong>Private by default.</strong>
+          <span>No account, no database, no analytics upload. Clearing browser site data will remove FinTrack data unless you export a backup first.</span>
         </div>
       </section>
 

@@ -123,3 +123,19 @@ fintrack/
 ---
 
 Built as a front-end portfolio project. Feedback and pull requests welcome.
+
+
+## FinTrack v2: local-first data
+
+FinTrack now starts with a clean ledger instead of automatically generating demo transactions. Transactions, budget, theme and currency are stored in the browser with no Supabase or backend required.
+
+### Local data controls
+
+- Add, edit and delete real transactions and keep them across reloads
+- Empty ledgers stay empty; sample data is optional
+- Export a JSON backup and import it later
+- Clear all finance data from Settings
+- Choose NGN, USD, GBP, EUR or CAD for display
+- Filter transactions by month, type and category
+
+> Browser storage belongs to the current browser/device. Export a backup before clearing site data, switching browsers, or moving devices.
